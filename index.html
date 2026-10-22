@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>垂直2等分線と外接円</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fff;--fg:#1a1a1a;--grid:#e5e5e5;--axis:#888;--pill:rgba(255,255,255,.85);--c1:#2563eb;--c2:#16a34a;--c3:#ea580c;--cc:#7c3aed;--c4:#db2777;--c5:#0891b2;--c6:#a16207}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16181d;--fg:#eee;--grid:#2a2d35;--axis:#777;--pill:rgba(22,24,29,.85);--c1:#60a5fa;--c2:#4ade80;--c3:#fb923c;--cc:#a78bfa;--c4:#f472b6;--c5:#22d3ee;--c6:#facc15}}
+:root[data-theme="dark"]{--bg:#16181d;--fg:#eee;--grid:#2a2d35;--axis:#777;--pill:rgba(22,24,29,.85);--c1:#60a5fa;--c2:#4ade80;--c3:#fb923c;--cc:#a78bfa;--c4:#f472b6;--c5:#22d3ee;--c6:#facc15}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+header{padding:12px 16px 4px}h1{font-size:18px;margin:0 0 4px}
+.sub{font-size:13px;opacity:.7}
+.ctl{display:flex;flex-wrap:wrap;gap:6px 14px;padding:6px 16px;font-size:14px;align-items:center}
+.ctl label{cursor:pointer;display:flex;align-items:center;gap:4px}
+button{font:inherit;font-size:13px;padding:3px 10px;border:1px solid var(--axis);border-radius:6px;background:none;color:var(--fg);cursor:pointer}
+#wrap{position:relative;height:calc(100vh - 130px);min-height:420px;overflow:hidden;touch-action:none;cursor:grab}
+#s{position:absolute;inset:0;width:100%;height:100%}
+.lb{position:absolute;transform:translate(-50%,-50%);background:var(--pill);padding:1px 5px;border-radius:4px;font-size:15px;white-space:nowrap;pointer-events:none}
+.lb svg{position:static;width:auto;height:auto;overflow:visible}
+</style></head><body>
+<header><h1>垂直2等分線 $l,m,n$ と外接円</h1>
+<div class="sub">ドラッグで移動・ホイール(ピンチ)で拡大縮小・チェックで表示切替</div></header>
+<div class="ctl">
+<label><input type="checkbox" id="tl" checked>$l$</label>
+<label><input type="checkbox" id="tm" checked>$m$</label>
+<label><input type="checkbox" id="tn" checked>$n$</label>
+<label><input type="checkbox" id="tL" checked>$L$</label>
+<label><input type="checkbox" id="tM" checked>$M$</label>
+<label><input type="checkbox" id="tN" checked>$N$</label>
+<label><input type="checkbox" id="tc" checked>円</label>
+<label><input type="checkbox" id="tt" checked>三角形ABC</label>
+<button id="reset">リセット</button></div>
+<div id="wrap"><svg id="s"></svg></div>
+<script>window.MathJax={tex:{inlineMath:[['$','$']]},svg:{fontCache:'none'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+<script>
+const NS='http://www.w3.org/2000/svg',wrap=document.getElementById('wrap'),svg=document.getElementById('s');
+const A=[1,-2],B=[-3,6],C=[-8,7],P=[-7,-1],R=Math.sqrt(65);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n);
+const lines=[
+ {id:'tl',f:x=>(x+5)/2,col:'--c1',tex:'$l:\\ y=\\frac{1}{2}x+\\frac{5}{2}$',at:[-14.5,-4.75]},
+ {id:'tm',f:x=>5*x+34,col:'--c2',tex:'$m:\\ y=5x+34$',at:[-6.4,2]},
+ {id:'tn',f:x=>x+6,col:'--c3',tex:'$n:\\ y=x+6$',at:[-13,-7]},
+ {id:'tL',f:x=>-2*x,col:'--c4',tex:'$L:\\ y=-2x$',at:[-4.5,9]},
+ {id:'tM',f:x=>-x/5+27/5,col:'--c5',tex:'$M:\\ y=-\\frac{1}{5}x+\\frac{27}{5}$',at:[-14,8.2]},
+ {id:'tN',f:x=>-x-1,col:'--c6',tex:'$N:\\ y=-x-1$',at:[5,-6]}];
+const cAng=Math.PI*1.2;
+const labels=[
+ ...lines.map(l=>({tex:l.tex,at:l.at,grp:l.id,col:l.col})),
+ {tex:'$(x+7)^2+(y+1)^2=65$',at:[-7,-9.9],grp:'tc',col:'--cc'},
+ {tex:'$\\mathrm{A}(1,-2)$',at:[1.9,-2.6],col:'--fg'},
+ {tex:'$\\mathrm{B}(-3,6)$',at:[-2.3,6.7],col:'--fg'},
+ {tex:'$\\mathrm{C}(-8,7)$',at:[-8.2,7.8],col:'--fg'},
+ {tex:'$\\mathrm{P}(-7,-1)$',at:[-6.1,-1.9],col:'--fg'}];
+labels.forEach(l=>{const d=document.createElement('div');d.className='lb';d.innerHTML=l.tex;l.el=d;wrap.appendChild(d)});
+let V;const home=()=>{const r=wrap.getBoundingClientRect();V={cx:-7,cy:-0.5,k:Math.min(r.width/22,r.height/20)}};home();
+const W=()=>wrap.clientWidth,H=()=>wrap.clientHeight;
+const sx=x=>W()/2+(x-V.cx)*V.k,sy=y=>H()/2-(y-V.cy)*V.k;
+function el(t,a,p=svg){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const on=id=>document.getElementById(id).checked;
+function draw(){
+ svg.innerHTML='';const w=W(),h=H();
+ const x0=V.cx-w/2/V.k,x1=V.cx+w/2/V.k,y0=V.cy-h/2/V.k,y1=V.cy+h/2/V.k;
+ const st=V.k>40?1:V.k>14?2:5;
+ for(let x=Math.ceil(x0/st)*st;x<=x1;x+=st)el('line',{x1:sx(x),x2:sx(x),y1:0,y2:h,stroke:css('--grid')});
+ for(let y=Math.ceil(y0/st)*st;y<=y1;y+=st)el('line',{y1:sy(y),y2:sy(y),x1:0,x2:w,stroke:css('--grid')});
+ el('line',{x1:sx(0),x2:sx(0),y1:0,y2:h,stroke:css('--axis'),'stroke-width':1.5});
+ el('line',{y1:sy(0),y2:sy(0),x1:0,x2:w,stroke:css('--axis'),'stroke-width':1.5});
+ if(on('tc'))el('circle',{cx:sx(P[0]),cy:sy(P[1]),r:R*V.k,fill:'none',stroke:css('--cc'),'stroke-width':2.5});
+ if(on('tt'))el('polygon',{points:[A,B,C].map(p=>sx(p[0])+','+sy(p[1])).join(' '),fill:'none',stroke:css('--fg'),'stroke-width':1.5,'stroke-dasharray':'5 4'});
+ lines.forEach(l=>{if(!on(l.id))return;el('line',{x1:sx(x0-1),y1:sy(l.f(x0-1)),x2:sx(x1+1),y2:sy(l.f(x1+1)),stroke:css(l.col),'stroke-width':2.5})});
+ // midpoints
+ if(on('tt'))[[-1,2],[-5.5,6.5],[-3.5,2.5]].forEach(m=>el('circle',{cx:sx(m[0]),cy:sy(m[1]),r:3.5,fill:css('--bg'),stroke:css('--fg'),'stroke-width':1.5}));
+ [A,B,C].forEach(p=>el('circle',{cx:sx(p[0]),cy:sy(p[1]),r:5.5,fill:css('--fg')}));
+ el('circle',{cx:sx(P[0]),cy:sy(P[1]),r:6,fill:css('--cc'),stroke:css('--bg'),'stroke-width':2});
+ labels.forEach(l=>{const show=!l.grp||on(l.grp);l.el.style.display=show?'':'none';
+  l.el.style.left=sx(l.at[0])+'px';l.el.style.top=sy(l.at[1])+'px';l.el.style.color=css(l.col)});
+}
+let drag=null;const pts=new Map();let pd=0;
+wrap.addEventListener('pointerdown',e=>{wrap.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);drag=[e.clientX,e.clientY];wrap.style.cursor='grabbing'});
+wrap.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;
+ if(pts.size===2){const a=[...pts.values()];pts.set(e.pointerId,[e.clientX,e.clientY]);const b=[...pts.values()];
+  const d=Math.hypot(b[0][0]-b[1][0],b[0][1]-b[1][1]);if(pd)V.k=Math.min(200,Math.max(5,V.k*d/pd));pd=d;draw();return}
+ pts.set(e.pointerId,[e.clientX,e.clientY]);
+ V.cx-=(e.clientX-drag[0])/V.k;V.cy+=(e.clientY-drag[1])/V.k;drag=[e.clientX,e.clientY];draw()});
+const up=e=>{pts.delete(e.pointerId);pd=0;drag=pts.size?[...pts.values()][0]:null;wrap.style.cursor='grab'};
+wrap.addEventListener('pointerup',up);wrap.addEventListener('pointercancel',up);
+wrap.addEventListener('wheel',e=>{e.preventDefault();const r=wrap.getBoundingClientRect();
+ const mx=V.cx+(e.clientX-r.left-W()/2)/V.k,my=V.cy-(e.clientY-r.top-H()/2)/V.k;
+ V.k=Math.min(200,Math.max(5,V.k*Math.exp(-e.deltaY*0.0015)));
+ V.cx=mx-(e.clientX-r.left-W()/2)/V.k;V.cy=my+(e.clientY-r.top-H()/2)/V.k;draw()},{passive:false});
+document.querySelectorAll('input').forEach(i=>i.onchange=draw);
+document.getElementById('reset').onclick=()=>{home();draw()};
+addEventListener('resize',draw);
+draw();
+</script></body></html>
